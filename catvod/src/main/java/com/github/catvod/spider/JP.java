@@ -9,7 +9,6 @@ import com.github.catvod.net.OkHttp;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.nio.charset.StandardCharsets;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -19,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 九州空间 - 兼容 FongMi
+ * 九州空间 - 纯Java实现，不依赖外部库
  * 站点: m.9zhoukj.com
  */
 public class JP extends Spider {
@@ -97,7 +96,18 @@ public class JP extends Spider {
     }
 
     /**
-     * 通用 API 请求（使用 FongMi OkHttp，自动加签名头）
+     * 网络请求封装
+     */
+    private String fetch(String url, Map<String, String> extraHeaders) throws Exception {
+        Map<String, String> allHeaders = new HashMap<>(headers);
+        if (extraHeaders != null) {
+            allHeaders.putAll(extraHeaders);
+        }
+        return OkHttp.string(url, allHeaders);
+    }
+
+    /**
+     * 通用 API 请求（自动加签名头）
      */
     private String fetchApi(String path, Map<String, String> params) throws Exception {
         if (params == null) params = new HashMap<>();
@@ -129,34 +139,6 @@ public class JP extends Spider {
         // 签名头
         Map<String, String> headersWithSign = buildSignHeaders(valid);
         return fetch(url, headersWithSign);
-    }
-
-    /**
-     * 网络请求封装（带字符编码检测）
-     */
-    private String fetch(String url, Map<String, String> extraHeaders) throws Exception {
-        Map<String, String> allHeaders = new HashMap<>(headers);
-        if (extraHeaders != null) {
-            allHeaders.putAll(extraHeaders);
-        }
-        okhttp3.Call call = OkHttp.newCall(url, allHeaders);
-        try (okhttp3.Response response = call.execute()) {
-            if (!response.isSuccessful() || response.body() == null) {
-                throw new Exception("HTTP " + response.code());
-            }
-            byte[] bytes = response.body().bytes();
-            String contentType = response.header("Content-Type", "").toLowerCase();
-            String charset = "UTF-8";
-            if (contentType.contains("gbk") || contentType.contains("gb2312")) {
-                charset = "GBK";
-            } else {
-                String preview = new String(bytes, 0, Math.min(bytes.length, 1024), StandardCharsets.ISO_8859_1);
-                if (preview.contains("charset=gbk") || preview.contains("charset=GBK")) {
-                    charset = "GBK";
-                }
-            }
-            return new String(bytes, charset);
-        }
     }
 
     // ----- homeContent -----
