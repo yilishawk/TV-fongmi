@@ -1,14 +1,6 @@
 package com.github.catvod.spider;
 
 import android.content.Context;
-
-import com.github.catvod.crawler.Spider;
-import com.github.catvod.crawler.SpiderDebug;
-import com.github.catvod.net.OkHttp;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -16,6 +8,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import com.github.catvod.crawler.Spider;
+import com.github.catvod.crawler.SpiderDebug;
+import com.github.catvod.net.OkHttp;
 
 /**
  * 九州空间 - 纯Java实现，不依赖外部库

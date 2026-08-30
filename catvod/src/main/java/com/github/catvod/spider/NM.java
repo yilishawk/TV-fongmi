@@ -1,30 +1,27 @@
 package com.github.catvod.spider;
 
 import android.content.Context;
-
-import com.github.catvod.crawler.Spider;
-import com.github.catvod.crawler.SpiderDebug;
-import com.github.catvod.net.OkHttp;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import com.github.catvod.crawler.Spider;
+import com.github.catvod.crawler.SpiderDebug;
+import com.github.catvod.net.OkHttp;
 
 /**
- * 农民影视 - 纯Java实现，不依赖外部库
+ * 农民影视 - 纯Java实现，不依赖Jsoup等外部库
  * 站点: vip.wwgz.cn:5200
  */
 public class NM extends Spider {
-
-    private static final String siteUrl = "https://vip.wwgz.cn:5200";
-    private static final String apiHost = "https://api.wwgz.cn:520";
+    
+    private static final String SITE_URL = "https://vip.wwgz.cn:5200";
+    private static final String API_HOST = "https://api.wwgz.cn:520";
     private static final String UA = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36";
-
+    
     private Map<String, String> headers;
 
     @Override
@@ -42,38 +39,83 @@ public class NM extends Spider {
     }
 
     /**
-     * 从HTML中提取指定标签的内容
+     * 提取所有li标签中的视频信息
      */
-    private String getTagContent(String html, String tag, int index) {
-        if (html == null || html.isEmpty()) return "";
-        String openTag = "<" + tag + ">";
-        String closeTag = "</" + tag + ">";
-        int start = 0;
-        for (int i = 0; i <= index; i++) {
-            start = html.indexOf(openTag, start);
-            if (start == -1) return "";
-            start += openTag.length();
+    private List<Map<String, String>> parseVideoList(String html) {
+        List<Map<String, String>> videos = new ArrayList<>();
+        
+        // 查找ul.resize_list或第一个ul
+        int ulStart = html.indexOf("resize_list");
+        if (ulStart == -1) {
+            ulStart = html.indexOf("<ul");
         }
-        int end = html.indexOf(closeTag, start);
-        if (end == -1) return "";
-        return html.substring(start, end).trim();
-    }
-
-    /**
-     * 从HTML中提取属性值
-     */
-    private String getAttr(String html, String attr, int index) {
-        if (html == null || html.isEmpty()) return "";
-        String pattern = attr + "=\"";
-        int start = 0;
-        for (int i = 0; i <= index; i++) {
-            start = html.indexOf(pattern, start);
-            if (start == -1) return "";
-            start += pattern.length();
+        if (ulStart == -1) return videos;
+        
+        int ulEnd = html.indexOf("</ul>", ulStart);
+        if (ulEnd == -1) return videos;
+        
+        String ulContent = html.substring(ulStart, ulEnd);
+        
+        // 分割每个li
+        int lastIndex = 0;
+        while (true) {
+            int liStart = ulContent.indexOf("<li", lastIndex);
+            if (liStart == -1) break;
+            
+            int liEnd = ulContent.indexOf("</li>", liStart);
+            if (liEnd == -1) break;
+            
+            String liContent = ulContent.substring(liStart, liEnd);
+            
+            Map<String, String> video = new HashMap<>();
+            
+            // 提取href
+            int hrefStart = liContent.indexOf("href=\"");
+            if (hrefStart != -1) {
+                hrefStart += 6;
+                int hrefEnd = liContent.indexOf("\"", hrefStart);
+                if (hrefEnd != -1) {
+                    String href = liContent.substring(hrefStart, hrefEnd);
+                    if (href.contains("/vod-detail-id-")) {
+                        String detailId = href.split("-")[3].replace(".html", "");
+                        video.put("vod_id", "detail_" + detailId);
+                    } else {
+                        video.put("vod_id", href);
+                    }
+                }
+            }
+            
+            // 提取标题（在a标签中）
+            int aStart = liContent.indexOf("<a");
+            if (aStart != -1) {
+                int aEnd = liContent.indexOf("</a>", aStart);
+                if (aEnd != -1) {
+                    String title = liContent.substring(aStart, aEnd).replaceAll("<[^>]+>", "").trim();
+                    if (!title.isEmpty()) {
+                        video.put("vod_name", title);
+                    }
+                }
+            }
+            
+            // 提取图片
+            int imgStart = liContent.indexOf("data-echo=\"");
+            if (imgStart == -1) imgStart = liContent.indexOf("src=\"");
+            if (imgStart != -1) {
+                imgStart += 9;
+                int imgEnd = liContent.indexOf("\"", imgStart);
+                if (imgEnd != -1) {
+                    video.put("vod_pic", liContent.substring(imgStart, imgEnd));
+                }
+            }
+            
+            if (!video.isEmpty()) {
+                videos.add(video);
+            }
+            
+            lastIndex = liEnd;
         }
-        int end = html.indexOf("\"", start);
-        if (end == -1) return "";
-        return html.substring(start, end).trim();
+        
+        return videos;
     }
 
     @Override
@@ -218,73 +260,21 @@ public class NM extends Spider {
                 }
             }
 
-            String url = siteUrl + String.format(
+            String url = SITE_URL + String.format(
                     "/vod-list-id-%s-pg-%s-order--by-%s-class-%s-year%s-letter--area%s-lang-.html",
                     listId, pg, order, classParam, yearPart, areaPart
             );
 
             String html = fetch(url);
-            
-            // 提取视频列表 - 简单HTML解析
+            List<Map<String, String>> videos = parseVideoList(html);
+
             JSONArray videoList = new JSONArray();
-            
-            // 查找所有li标签
-            int liStart = html.indexOf("<ul", html.indexOf("resize_list"));
-            if (liStart == -1) {
-                // 尝试其他容器
-                liStart = html.indexOf("<ul");
-            }
-            if (liStart != -1) {
-                int liEnd = html.indexOf("</ul>", liStart);
-                if (liEnd != -1) {
-                    String ulContent = html.substring(liStart, liEnd);
-                    
-                    // 分割每个li
-                    String[] items = ulContent.split("<li");
-                    for (String item : items) {
-                        if (!item.contains("href=")) continue;
-                        
-                        JSONObject vod = new JSONObject();
-                        
-                        // 提取链接
-                        int hrefStart = item.indexOf("href=\"");
-                        if (hrefStart != -1) {
-                            hrefStart += 6;
-                            int hrefEnd = item.indexOf("\"", hrefStart);
-                            if (hrefEnd != -1) {
-                                String href = item.substring(hrefStart, hrefEnd);
-                                vod.put("vod_id", href.contains("/vod-detail-id-") ? "detail_" + href.split("-")[3].replace(".html", "") : href);
-                            }
-                        }
-                        
-                        // 提取标题
-                        int titleStart = item.indexOf(">");
-                        if (titleStart != -1) {
-                            int titleEnd = item.indexOf("</", titleStart);
-                            if (titleEnd != -1) {
-                                String title = item.substring(titleStart + 1, titleEnd).trim();
-                                if (!title.isEmpty()) {
-                                    vod.put("vod_name", title);
-                                }
-                            }
-                        }
-                        
-                        // 提取图片
-                        int imgStart = item.indexOf("data-echo=\"");
-                        if (imgStart != -1) {
-                            imgStart += 11;
-                            int imgEnd = item.indexOf("\"", imgStart);
-                            if (imgEnd != -1) {
-                                vod.put("vod_pic", item.substring(imgStart, imgEnd));
-                            }
-                        }
-                        
-                        // 提取备注
-                        if (vod.length() > 0) {
-                            videoList.put(vod);
-                        }
-                    }
-                }
+            for (Map<String, String> v : videos) {
+                JSONObject vod = new JSONObject();
+                vod.put("vod_id", v.getOrDefault("vod_id", ""));
+                vod.put("vod_name", v.getOrDefault("vod_name", ""));
+                vod.put("vod_pic", v.getOrDefault("vod_pic", ""));
+                videoList.put(vod);
             }
 
             JSONObject result = new JSONObject();
@@ -308,10 +298,9 @@ public class NM extends Spider {
             String detailUrl;
             if (vodId.startsWith("detail_")) {
                 detailId = vodId.substring(7);
-                detailUrl = siteUrl + "/vod-detail-id-" + detailId + ".html";
+                detailUrl = SITE_URL + "/vod-detail-id-" + detailId + ".html";
             } else {
-                detailUrl = vodId.startsWith("http") ? vodId : siteUrl + vodId;
-                // 提取详情ID
+                detailUrl = vodId.startsWith("http") ? vodId : SITE_URL + vodId;
                 int idStart = detailUrl.indexOf("vod-detail-id-");
                 if (idStart != -1) {
                     idStart += "vod-detail-id-".length();
@@ -363,49 +352,18 @@ public class NM extends Spider {
     public String searchContent(String key, boolean quick) {
         try {
             String pg = "1";
-            String url = siteUrl + "/vod-search-pg-" + pg + "-wd-" + URLEncoder.encode(key, "UTF-8") + ".html";
+            String url = SITE_URL + "/vod-search-pg-" + pg + "-wd-" + URLEncoder.encode(key, "UTF-8") + ".html";
             String html = fetch(url);
             
+            List<Map<String, String>> videos = parseVideoList(html);
+
             JSONArray videoList = new JSONArray();
-            
-            // 简单解析搜索结果
-            String[] items = html.split("<li");
-            for (String item : items) {
-                if (!item.contains("href=")) continue;
-                
-                JSONObject v = new JSONObject();
-                
-                // 提取链接
-                int hrefStart = item.indexOf("href=\"");
-                if (hrefStart != -1) {
-                    hrefStart += 6;
-                    int hrefEnd = item.indexOf("\"", hrefStart);
-                    if (hrefEnd != -1) {
-                        String href = item.substring(hrefStart, hrefEnd);
-                        if (href.contains("/vod-detail-id-")) {
-                            String detailId = href.split("-")[3].replace(".html", "");
-                            v.put("vod_id", "detail_" + detailId);
-                        } else {
-                            v.put("vod_id", href);
-                        }
-                    }
-                }
-                
-                // 提取标题
-                int titleStart = item.indexOf(">");
-                if (titleStart != -1) {
-                    int titleEnd = item.indexOf("</", titleStart);
-                    if (titleEnd != -1) {
-                        String title = item.substring(titleStart + 1, titleEnd).trim();
-                        if (!title.isEmpty()) {
-                            v.put("vod_name", title);
-                        }
-                    }
-                }
-                
-                if (v.length() > 0) {
-                    videoList.put(v);
-                }
+            for (Map<String, String> v : videos) {
+                JSONObject vod = new JSONObject();
+                vod.put("vod_id", v.getOrDefault("vod_id", ""));
+                vod.put("vod_name", v.getOrDefault("vod_name", ""));
+                vod.put("vod_pic", v.getOrDefault("vod_pic", ""));
+                videoList.put(vod);
             }
 
             JSONObject result = new JSONObject();
@@ -425,7 +383,7 @@ public class NM extends Spider {
     public String playerContent(String flag, String id, List<String> vipFlags) {
         try {
             if (id != null && !id.contains("http") && !id.contains("$") && !id.contains("?")) {
-                String apiUrl = apiHost + "/player/?url=" + id;
+                String apiUrl = API_HOST + "/player/?url=" + id;
                 String res = fetch(apiUrl);
                 
                 // 提取URL
