@@ -1,5 +1,6 @@
 package com.github.catvod.bean;
 
+import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 import java.util.List;
 
@@ -66,6 +67,6 @@ public class Result {
     }
 
     public String string() {
-        return com.google.gson.Gson().newBuilder().disableHtmlEscaping().create().toJson(this);
+        return new Gson().newBuilder().disableHtmlEscaping().create().toJson(this);
     }
 }
