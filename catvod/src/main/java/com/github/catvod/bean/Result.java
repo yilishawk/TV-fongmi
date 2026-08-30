@@ -1,17 +1,13 @@
 package com.github.catvod.bean;
 
 import com.google.gson.annotations.SerializedName;
-
 import java.util.List;
-import java.util.Map;
 
 public class Result {
     @SerializedName("class")
     private List<Class> classes;
     @SerializedName("list")
     private List<Vod> list;
-    @SerializedName("filters")
-    private Map<String, List<Filter>> filters;
     @SerializedName("url")
     private String url;
     @SerializedName("parse")
@@ -46,11 +42,6 @@ public class Result {
         return this;
     }
 
-    public Result filters(Map<String, List<Filter>> filters) {
-        this.filters = filters;
-        return this;
-    }
-
     public Result url(String url) {
         this.url = url;
         return this;
@@ -75,6 +66,6 @@ public class Result {
     }
 
     public String string() {
-        return com.github.catvod.utils.Json.toJson(this);
+        return com.google.gson.Gson().newBuilder().disableHtmlEscaping().create().toJson(this);
     }
 }
