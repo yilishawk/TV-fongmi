@@ -107,7 +107,6 @@ dependencies {
     implementation libs.media3.ui
     implementation libs.media3.datasource.okhttp
     implementation libs.media3.effect
-    implementation libs.media3.caption
     implementation libs.palette
     implementation libs.recyclerview
     implementation libs.room.runtime
