@@ -1,0 +1,46 @@
+name: Build FongMi Release APK
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+      
+      - name: Create signing config
+        run: |
+          echo "storeFile=${{ secrets.STORE_FILE }}" > local.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> local.properties
+          echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> local.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> local.properties
+      
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      
+      - name: Build Release APK (Leanback)
+        run: ./gradlew assembleLeanbackRelease
+        
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TV-Leanback-Release
+          path: app/build/outputs/apk/leanback/release/*.apk
+      
+      - name: Upload to Release (if published)
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: app/build/outputs/apk/leanback/release/*.apk
