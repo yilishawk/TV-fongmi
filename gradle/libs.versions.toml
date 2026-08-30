@@ -86,7 +86,6 @@ glide-okhttp3-integration = { group = "com.github.bumptech.glide", name = "okhtt
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
-jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 juniversalchardet = { group = "com.googlecode.juniversalchardet", name = "juniversalchardet", version.ref = "juniversalchardet" }
 rtmp-client = { group = "com.github.mcxinyu", name = "LibRtmp-Client-for-Android", version.ref = "rtmpClient" }
