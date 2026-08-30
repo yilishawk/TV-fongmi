@@ -1,0 +1,23 @@
+{
+  "spider": "file:///C:/Users/Administrator/Desktop/AndroidCatVodSpider-multiThread/jar/custom_spider.jar",
+  "sites": [
+    {
+      "key": "农民影视",
+      "name": "农民影视",
+      "type": 3,
+      "api": "csp_NM",
+      "searchable": 1,
+      "changeable": 1,
+      "timeout": 30
+    },
+    {
+      "key": "九州空间",
+      "name": "九州空间",
+      "type": 3,
+      "api": "csp_JP",
+      "searchable": 1,
+      "changeable": 1,
+      "timeout": 30
+    }
+  ]
+}

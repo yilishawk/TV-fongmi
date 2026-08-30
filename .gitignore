@@ -2,10 +2,11 @@
 .vscode
 .gradle
 .settings
-*build
+/build/
 *.jks
 *.properties
 !gradle/wrapper/gradle-wrapper.properties
 lib-*.aar
 /Release
 /docs
+node_modules/
